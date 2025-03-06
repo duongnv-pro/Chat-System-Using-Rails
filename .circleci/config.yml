@@ -1,0 +1,65 @@
+version: 2.1
+
+executors:
+  ruby_executor:
+    docker:
+      - image: cimg/ruby:3.0.6-browsers
+      - image: cimg/mysql:5.7.36
+        name: mysql
+        environment:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: chat_system_DB
+          MYSQL_USER: mohamed
+          MYSQL_PASSWORD: 1234
+      - image: redis:alpine
+      - image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+        environment:
+          discovery.type: single-node
+          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+
+jobs:
+  setup:
+    executor: ruby_executor
+    steps:
+      - checkout
+      - run:
+          name: Wait for MySQL
+          command: |
+            for i in {1..30}; do
+              nc -z mysql 3306 && echo "MySQL is up!" && exit 0
+              echo "Waiting for MySQL..."
+              sleep 2
+            done
+            echo "MySQL did not start in time!" && exit 1
+      - run:
+          name: Install Dependencies
+          command: bundle install
+      - run:
+          name: Setup Database
+          command: bundle exec rails db:create db:migrate db:seed
+  lint:
+    executor: ruby_executor
+    steps:
+      - checkout
+      - run:
+          name: Run RuboCop
+          command: bundle exec rubocop
+  test:
+    executor: ruby_executor
+    steps:
+      - checkout
+      - run:
+          name: Run RSpec Tests
+          command: bundle exec rspec
+
+workflows:
+  version: 2
+  ci_pipeline:
+    jobs:
+      - setup
+      - lint:
+          requires:
+            - setup
+      - test:
+          requires:
+            - setup
