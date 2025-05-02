@@ -70,8 +70,8 @@ services:
     command: >
       bash -c "
          /usr/local/bin/wait-for-it -t 0 mysql:3306 &&
-         ./bin/rails db:create && ./bin/rails db:migrate &&
-        ./bin/rails server
+         bundle exec rails db:create && bundle exec rails db:migrate &&
+         bundle exec rails server
       "
     environment:
       ELASTICSEARCH_URL: "http://elasticsearch:9200"
